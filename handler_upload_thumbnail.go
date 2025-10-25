@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"io"
-	"encoding/base64"
+	"path/filepath"
+	"os"
+	//"log"
 
 	"github.com/genus555/tubely/internal/auth"
 	"github.com/genus555/tubely/internal/database"
@@ -55,12 +57,20 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	}
 	mediaType := vals[0]
 
+	//get file extension from mediaType
+	if mediaType[:6] == "image/" {
+		mediaType = mediaType[6:]
+	} else {
+		respondWithError(w, http.StatusBadRequest, "Media not an image", err)
+		return
+	}
+/*
 	//get image data
 	img_data, err := io.ReadAll(file)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Unable to read file", err)
 		return
-	}
+	}*/
 
 	//get video metadata
 	vid, err := cfg.db.GetVideo(videoID)
@@ -75,11 +85,22 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	//turn thumbnail data into str
-	img_str := base64.StdEncoding.EncodeToString(img_data)
+	//save img_data at /assets/
+	file_name := fmt.Sprintf("%s.%s", videoIDString, mediaType)
+	asset_path := filepath.Join(cfg.assetsRoot,"/",file_name)
+	
+	tn, err := os.Create(asset_path)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "File creation failed", err)
+		return
+	}
+	if _, err := io.Copy(tn, file); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "File can't be copied", err)
+		return
+	}
 
 	//turn img_str into ThumbnailURL
-	new_thumbnail_url := fmt.Sprintf("data:%s;base64,%s", mediaType, img_str)
+	new_thumbnail_url := fmt.Sprintf("http://localhost:8091/%s", asset_path)
 	video := database.Video{
 		ID:					videoID,
 		ThumbnailURL:		&new_thumbnail_url,
