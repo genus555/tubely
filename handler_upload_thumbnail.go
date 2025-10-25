@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"io"
+	"encoding/base64"
 
 	"github.com/genus555/tubely/internal/auth"
 	"github.com/genus555/tubely/internal/database"
@@ -74,15 +75,11 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	//add thumbnail to global thumbnail map
-	thumbnail := thumbnail{
-		data:		img_data,
-		mediaType:	mediaType,
-	}
-	videoThumbnails[videoID] = thumbnail
+	//turn thumbnail data into str
+	img_str := base64.StdEncoding.EncodeToString(img_data)
 
-	//update video metadata in database
-	new_thumbnail_url := fmt.Sprintf("http://localhost:8091/api/thumbnails/%s", videoIDString)
+	//turn img_str into ThumbnailURL
+	new_thumbnail_url := fmt.Sprintf("data:%s;base64,%s", mediaType, img_str)
 	video := database.Video{
 		ID:					videoID,
 		ThumbnailURL:		&new_thumbnail_url,
@@ -101,6 +98,4 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	respondWithJSON(w, http.StatusOK, video)
 
 	// TODO END
-
-	//respondWithJSON(w, http.StatusOK, struct{}{})
 }
