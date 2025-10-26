@@ -6,7 +6,8 @@ import (
 	"io"
 	"path/filepath"
 	"os"
-	//"log"
+	"crypto/rand"
+	"encoding/base64"
 
 	"github.com/genus555/tubely/internal/auth"
 	"github.com/genus555/tubely/internal/database"
@@ -64,13 +65,6 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		respondWithError(w, http.StatusBadRequest, "Media not an image", err)
 		return
 	}
-/*
-	//get image data
-	img_data, err := io.ReadAll(file)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Unable to read file", err)
-		return
-	}*/
 
 	//get video metadata
 	vid, err := cfg.db.GetVideo(videoID)
@@ -85,9 +79,14 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	//randomize file_name
+	key := make([]byte, 32)
+	rand.Read(key)
+	file_name := base64.RawURLEncoding.EncodeToString(key)
+
 	//save img_data at /assets/
-	file_name := fmt.Sprintf("%s.%s", videoIDString, mediaType)
-	asset_path := filepath.Join(cfg.assetsRoot,"/",file_name)
+	full_file_name := fmt.Sprintf("%s.%s", file_name, mediaType)
+	asset_path := filepath.Join(cfg.assetsRoot,"/",full_file_name)
 	
 	tn, err := os.Create(asset_path)
 	if err != nil {
