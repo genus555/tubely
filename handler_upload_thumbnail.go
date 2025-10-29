@@ -6,8 +6,6 @@ import (
 	"io"
 	"path/filepath"
 	"os"
-	"crypto/rand"
-	"encoding/base64"
 
 	"github.com/genus555/tubely/internal/auth"
 	"github.com/genus555/tubely/internal/database"
@@ -80,9 +78,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	}
 
 	//randomize file_name
-	key := make([]byte, 32)
-	rand.Read(key)
-	file_name := base64.RawURLEncoding.EncodeToString(key)
+	file_name := MakeFileName()
 
 	//save img_data at /assets/
 	full_file_name := fmt.Sprintf("%s.%s", file_name, mediaType)

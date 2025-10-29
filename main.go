@@ -4,10 +4,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"context"
 
 	"github.com/genus555/tubely/internal/database"
-
 	"github.com/joho/godotenv"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/config"
 	_ "github.com/lib/pq"
 )
 
@@ -21,6 +23,7 @@ type apiConfig struct {
 	s3Region         string
 	s3CfDistribution string
 	port             string
+	s3Client		 *s3.Client
 }
 
 type thumbnail struct {
@@ -81,6 +84,13 @@ func main() {
 		log.Fatal("PORT environment variable is not set")
 	}
 
+	//add s3 client
+	s3cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(s3Region),)
+	if err != nil {
+		log.Fatal("issue with s3Client: %v", err)
+	}
+	s3Cli := s3.NewFromConfig(s3cfg)
+
 	cfg := apiConfig{
 		db:               db,
 		jwtSecret:        jwtSecret,
@@ -91,6 +101,7 @@ func main() {
 		s3Region:         s3Region,
 		s3CfDistribution: s3CfDistribution,
 		port:             port,
+		s3Client:		  s3Cli,
 	}
 
 	err = cfg.ensureAssetsDir()
