@@ -93,6 +93,14 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	//get aspect ratio of video
+	aspect_ratio, err := getVideoAspectRatio(tmp.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to get aspect ratio", err)
+		return
+	}
+	aspectType := aspectRatioType(aspect_ratio)
+
 	//reset file pointer to read file from beginning again
 	if _, err = file.Seek(0, io.SeekStart); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Unable to return to beginning of file", err)
@@ -101,7 +109,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 
 	//insert file into s3 bucket
 	file_name := MakeFileName()
-	file_name = fmt.Sprintf("%s.mp4", file_name)
+	file_name = fmt.Sprintf("%s/%s.mp4", aspectType, file_name)
 
 	putInput := &s3.PutObjectInput{
 		Bucket:			&cfg.s3Bucket,

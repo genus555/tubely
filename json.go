@@ -6,6 +6,13 @@ import (
 	"net/http"
 )
 
+type JSON struct {
+	Streams		[]struct{
+		Width		int		`json:"width"`
+		Height		int		`json:"height"`
+	}`json:"streams"`
+}
+
 func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
 	if err != nil {
 		log.Println(err)
@@ -31,4 +38,12 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	}
 	w.WriteHeader(code)
 	w.Write(dat)
+}
+
+func unMarshal(data []byte) (JSON, error) {
+	var info JSON
+	if err := json.Unmarshal(data, &info); err != nil {
+		return JSON{}, err
+	}
+	return info, nil
 }
