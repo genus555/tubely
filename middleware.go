@@ -44,3 +44,12 @@ func aspectRatioType(ratio string) (string) {
 		return "other"
 	}
 }
+
+func processVideoForFastStart(filePath string) (string, error) {
+	output_path := filePath + ".processing"
+
+	cmd := exec.Command("ffmpeg", "-i", filePath, "-c", "copy", "-movflags", "faststart", "-f", "mp4", output_path)
+	if err := cmd.Run(); err != nil {return "", err}
+
+	return output_path, nil
+}

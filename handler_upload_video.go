@@ -101,11 +101,21 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	}
 	aspectType := aspectRatioType(aspect_ratio)
 
-	//reset file pointer to read file from beginning again
-	if _, err = file.Seek(0, io.SeekStart); err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Unable to return to beginning of file", err)
+	//process video for fast start
+	processed_video_path, err := processVideoForFastStart(tmp.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to process video", err)
 		return
 	}
+
+	//open processed video for reading
+	processed_video, err := os.Open(processed_video_path)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error opening processed video", err)
+		return
+	}
+	defer processed_video.Close()
+	defer os.Remove(processed_video_path)
 
 	//insert file into s3 bucket
 	file_name := MakeFileName()
@@ -114,7 +124,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	putInput := &s3.PutObjectInput{
 		Bucket:			&cfg.s3Bucket,
 		Key:			&file_name,
-		Body:			file,
+		Body:			processed_video,
 		ContentType:	&mediaType,
 	}
 	if _, err = cfg.s3Client.PutObject(r.Context(), putInput); err != nil {
