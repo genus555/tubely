@@ -6,6 +6,7 @@ import (
 	"os"
 	"io"
 	"fmt"
+	"log"
 
 	"github.com/genus555/tubely/internal/auth"
 	"github.com/genus555/tubely/internal/database"
@@ -132,23 +133,37 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	//bucket + key string
+	bucket_key := fmt.Sprintf("%s,%s", cfg.s3Bucket, file_name)
+
 	//update VideoURL in database records
-	vidURL := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfg.s3Bucket, cfg.s3Region, file_name)
+	//vidURL := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfg.s3Bucket, cfg.s3Region, file_name)
 	updatedVid := database.Video{
 		ID:					vid.ID,
 		CreatedAt:			vid.CreatedAt,
 		UpdatedAt:			vid.UpdatedAt,
 		ThumbnailURL:		vid.ThumbnailURL,
-		VideoURL:			&vidURL,
+		VideoURL:			&bucket_key,
 		CreateVideoParams:	database.CreateVideoParams{
 			Title:			vid.Title,
 			Description:	vid.Description,
 			UserID:			userID,
 		},
 	}
+
+	//debug
+	log.Printf("\nSaving video URL: %q", bucket_key)
+
 	err = cfg.db.UpdateVideo(updatedVid)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error updating database", err)
 		return
 	}
+
+	signed, err := cfg.dbVideoToSignedVideo(updatedVid)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error with signed video", err)
+		return
+	}
+	respondWithJSON(w, http.StatusOK, signed)
 }
